@@ -3,14 +3,47 @@
 var video,
     vidTimer,
     imgs = [],
-    frames=[];
+    gif, gif2;
 
 var frameRate = 1000/4.0;
 
 var colArray = new Array();
 var canvas = document.getElementById("canvas");
-//color stuff
+var dcanvas = document.createElement("canvas");
+dcanvas.width = canvas.width;
+dcanvas.height = canvas.height;
 
+
+gif = new GIF({
+  workers: 4,
+    quality: 10,
+    width: canvas.width,
+    height: canvas.height,
+    workerScript: 'libs/gif.worker.js'
+});
+
+gif.on('finished', function(blob){
+  var gifimg = document.createElement('img');
+  gifimg.id = 'result';
+  gifimg.src = URL.createObjectURL(blob);
+  $("body").append(gifimg);
+});
+
+
+gif2 = new GIF({
+  workers: 4,
+    quality: 10,
+    width: canvas.width,
+    height: canvas.height,
+    workerScript: 'libs/gif.worker.js'
+});
+
+gif2.on('finished', function(blob){
+  var gifimg = document.createElement('img');
+  gifimg.id = 'result';
+  gifimg.src = URL.createObjectURL(blob);
+  $("body").append(gifimg);
+});
 
 var showVid = function() {
   var ctx = canvas.getContext('2d');
@@ -18,16 +51,39 @@ var showVid = function() {
   ctx.save();
   ctx.rotate(270 * Math.PI / 180);
   ctx.translate(-1*canvas.width,0);
+  ctx.scale(0.5,0.5);
   ctx.drawImage(video, 0, 0);
   ctx.restore();
   var img = new Image();
   img.src=canvas.toDataURL();
   imgs.push(img);
+
+
+  var dctx = dcanvas.getContext('2d');
+  dctx.save();
+  dctx.translate(1*canvas.width,0);
+  dctx.rotate(90* Math.PI / 180);
+  dctx.drawImage(img, 0, 0);
+  dctx.restore();
+  var img2 = new Image();
+  img2.src=dcanvas.toDataURL();
+  gif2.addFrame(img2, {delay:200});
+
   // Repeat 40 times a second to oversample 30 fps video
   vidTimer = setTimeout(showVid, frameRate);
 }
 
 var processImage = function(img, callback) {
+
+  var dctx = dcanvas.getContext('2d');
+  dctx.save();
+  dctx.translate(1*canvas.width,0);
+  dctx.rotate(90* Math.PI / 180);
+  dctx.drawImage(img, 0, 0);
+ console.log(dctx);
+  dctx.restore();
+
+
   var ctx = canvas.getContext('2d');
   ctx.drawImage(img, 0, 0);
   var pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -97,7 +153,7 @@ var processImage = function(img, callback) {
 
     //in memory canvas to draw it rotated
     //see http://stackoverflow.com/questions/7638919/putimagedata-on-rotated-canvas-work-incorrect
-    mcanvas = document.createElement("canvas");
+    var mcanvas = document.createElement("canvas");
     mcanvas.width = canvas.width;
     mcanvas.height = canvas.height;
     mctx = mcanvas.getContext('2d');
@@ -110,9 +166,7 @@ var processImage = function(img, callback) {
     ctx.restore();
     var img = new Image();
     img.src=canvas.toDataURL();
-    frames.push(img);
-   $('body').append(img);
-
+    gif.addFrame(img, {delay:200});
     callback();
   }
 
@@ -125,6 +179,10 @@ var processImage = function(img, callback) {
 var processHandler = function(){
   if(imgs.length <1){
     console.log('done');
+    $(canvas).remove();
+    gif.render();
+  //  gif2.render();
+    $(dcanvas).remove();
   }
   else{
     processImage(imgs.shift(), processHandler);
@@ -135,19 +193,24 @@ var processHandler = function(){
 var vidEnded =function(e){
   console.log(imgs.length);
   clearInterval(vidTimer);
+  $(video).remove();
+  $("body").append(dcanvas);
   processImage(imgs.shift(), processHandler);
 }
 
 var initVid = function(){
+
+  $(canvas).remove();
+ // $(canvas).remove();
   video = document.createElement('video');
   $('body').append(video);
-  video.src = "media/vine.mp4";
+  video.src = "media/vine2.mp4";
+  video.width = canvas.width;
   video.addEventListener('ended',vidEnded,false);
 
   video.addEventListener('loadeddata', function() {
     showVid();
     video.play();
-//    processImage(video);
   }, false);
 }
 
