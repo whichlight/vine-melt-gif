@@ -1,9 +1,9 @@
-//https://developer.apple.com/library/safari/documentation/AudioVideo/Conceptual/HTML-canvas-guide/PuttingVideoonCanvas/PuttingVideoonCanvas.html
-
 var video,
     vidTimer,
     imgs = [],
     gif, gif2;
+
+var blob;
 
 var frameRate = 1000/4.0;
 
@@ -80,7 +80,6 @@ var processImage = function(img, callback) {
   dctx.translate(1*canvas.width,0);
   dctx.rotate(90* Math.PI / 180);
   dctx.drawImage(img, 0, 0);
- console.log(dctx);
   dctx.restore();
 
 
@@ -110,7 +109,6 @@ var processImage = function(img, callback) {
       var index = e.data.index;
       var start = index*(blockSize);
       var end = start+(blockSize);
-      console.log("finished " + index);
 
       for(var j=start; j<end; j++){
         for(var i=0; i<width; i++){
@@ -125,7 +123,6 @@ var processImage = function(img, callback) {
     };
 
     for (var index = 0; index < workersCount; index++){
-      console.log("start worker " + index);
       var worker = new Worker('js/sortProcessor.js');
       worker.onmessage = onWorkEnded;
       var start = index*(blockSize);
@@ -170,7 +167,6 @@ var processImage = function(img, callback) {
     callback();
   }
 
-  console.log("start sort");
   sortPixels(function(){
     writeToCanvas();
   });
@@ -178,10 +174,9 @@ var processImage = function(img, callback) {
 
 var processHandler = function(){
   if(imgs.length <1){
-    console.log('done');
     $(canvas).remove();
     gif.render();
-  //  gif2.render();
+    gif2.render();
     $(dcanvas).remove();
   }
   else{
@@ -191,27 +186,30 @@ var processHandler = function(){
 
 
 var vidEnded =function(e){
-  console.log(imgs.length);
   clearInterval(vidTimer);
   $(video).remove();
   $("body").append(dcanvas);
   processImage(imgs.shift(), processHandler);
 }
 
-var initVid = function(){
-
+var initVid = function(source){
   $(canvas).remove();
- // $(canvas).remove();
   video = document.createElement('video');
   $('body').append(video);
-  video.src = "media/vine2.mp4";
+  video.src = source;
+  video.muted=true;
+  console.log(source);
   video.width = canvas.width;
   video.addEventListener('ended',vidEnded,false);
-
   video.addEventListener('loadeddata', function() {
     showVid();
     video.play();
+    console.log('playing');
   }, false);
 }
 
-
+$(document).ready(function(){
+  $.get("/getvine").done(function(res){
+    initVid(res);
+  })
+});
